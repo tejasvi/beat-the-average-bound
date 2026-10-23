@@ -1,0 +1,124 @@
+Track 639, k = 9 (C <= 20034817/50000000), K track: kernel only (no native_decide, no Lean.ofReduceBool, no
+implemented_by/extern in the checked definitions, no added axioms). Sources frozen 2026-10-22.
+Toolchain leanprover/lean4:v4.35.0-rc3, Mathlib v4.35.0-rc3 (lake-manifest.json); .lake/packages as for k = 6, 7, 8.
+
+Finals (BeatAvg/K/K9.lean): BeatAvg.K.upperBound_k9 : UpperBound (20034817 / 50000000), BeatAvg.K.upperBoundRV_k9,
+BeatAvg.K.C639_le_k9 : C639 ≤ 20034817 / 50000000. Axioms (run/k9K_axioms.txt): propext, Classical.choice, Quot.sound.
+The certificate is the one of the N track (BeatAvg/Data/K9.lean and Data/K9/*, as in lean/k789), so the bound is
+the same.
+
+Structure
+- Soundness: BeatAvg.Check.k9K_sound (Check/K9K.lean, with Check/K9KIdx.lean, Check/K8K.lean, Check/K8KJoin.lean,
+  Check/K9b.lean) and the stage-3 joins Check/K9KS3.lean: checks of a kernel evaluator over tables (Core/K9K.lean on
+  top of Core/K8K.lean, Core/K7K.lean, Core/KTab.lean; tables Data/K9K/*.lean) imply the hypotheses of the flag method
+  for the certificate Data/K9.lean. Lemma 5.2 of the paper in three stages, as in checkK9 (N track):
+    stage 1: every 8-tuple (indexed join by parent, as for k = 8) has F8 ≤ cap (unless excluded) and F8 ≤ θ =
+      9 λ - 8 cap unless it is in S (251 tuples) or excluded;
+    stage 2: every 9-tuple of members of S has val9 ≤ λ (or an excluded restriction);
+    stage 3: every 9-tuple with at least two core restrictions (458 core tuples: the 8-patterns carrying (7,8) flags)
+      has val9 ≤ λ. It is enumerated from its first two core positions x < z: items (c, x, z) with the core tuple c at
+      x; for every core tuple c' at z that fits c, the other seven restrictions are enumerated by anchored joins
+      (extendA over the seven indexes Idx_k, by face k) with every entry already fixed by c, c' or an earlier
+      restriction; a 9-tuple whose first two core positions are not x, z is skipped (it belongs to another item).
+  Rows of the (6,7) blocks are read from trees of depth 10 (one block has 625 flags, a tree of depth 9 holds 512 rows):
+  qfKd/qrowOKd/qrowPd/qfMd (Core/K9K.lean) with qfKd_eq, qrowPd_sound, qrowOKd_add and f8K_eqD (Check/K9KRow.lean,
+  the lemmas of the check with 8 points at depth d).
+  Numbers: f7 of a 7-pattern = valK7 (value at 7 points of the lower blocks); F8 = 7 qscale Σ f7 + S topTermF 8 (top
+  flags of the (6,7) blocks) = 56 qscale S val8 (f8K_eq); F9 = 8 qscale Σ F8 + S8 topTermF 9 (top flags of the (7,8)
+  blocks, from the core table) = 72 qscale S8 val9 (f9K_eq), S8 = 56 qscale S, S = 42 den6 qscale d14.
+  Pieces: idxK_complete (each index lists, for every 6-pattern, exactly the 7-patterns with that face, by counting),
+  collectA_complete / extendA_complete (anchored joins visit every fitting tuple), join9_sound, join9E2_sound,
+  num7_sound / num_inj (numbers of 7-patterns from their bits), coreOK_facts, cnumK_sound / cnumK_complete (core
+  lookup by bisection and tuple comparison), topLists_K9 (flag-core completeness), fLower9_eq, f9K_eq,
+  exists_tuples9, not_excl8 / not_excl9; stage3P_eq, s3unit_of_parts (a unit from chunks of its first candidates).
+- Computations: the theorems of BeatAvg/K/K9/*.lean ("shards", each proved by `decide +kernel`), core Lean only:
+  every shard imports BeatAvg.K.K9.Defs, BeatAvg.K.Split, BeatAvg.K.Split8 (M, P and R shards: BeatAvg.Core.KPack),
+  whose import closure is core Lean (no Mathlib). Inside a shard every item is its own theorem, so the kernel's caches
+  are freed between declarations.
+- Shards (2,943, plus BeatAvg/K/K9/Defs.lean with the names):
+    Pre (tree chain to level 6, parents of level 7, lower-block kinds and shapes, 6-point values, sortedness of the
+    6-pattern table, the (1,4) table, sizes, exclusions and their tuples), Cnt (index counts, 7 faces),
+    Top (top-flag lists of the 6-patterns for the (5,6) blocks), W<i> / V<i> (the (6,7) / (7,8) blocks are well formed),
+    F<i> (f6), P<b> ((5,6) rows), M<i> ((6,7) rows), R<i> ((7,8) rows), X<i> (level-7 records: tree walk and numbered
+    patterns), I<k>_<i> (index runs of the seven indexes), G<i> ((6,7) top lists complete), C0 (core table), C<i>
+    ((7,8) flags: flag-core completeness), J<i> (stage 1: joins of 8-tuples by parent, joinRange K body lo n; at most
+    8 parents per theorem, fewer where the parents are expensive), S2 (stage 2), S3_<i> (stage 3: an item
+    stage3P K K9 b9 c x z per theorem, or for the 1,713 heavy items ranges of c' (allR of s3unit) and parts of
+    heavy units (s3part, with the bound on the number of first candidates)).
+- Assembly (Mathlib): BeatAvg/K/K9/AX.lean (records), AJ.lean (stage 1: allR_add chains with explicit arguments, at
+  most 64 references per declaration), AB.lean (blocks, rows, flags, f6, indexes, core table), AS.lean (stage 2;
+  stage 3: split items joined by allR_add chains and s3unit_of_parts, then per core tuple by interval_cases),
+  BeatAvg/K/K9.lean (k9K_sound + the flag method). All assembly files set Elab.async false.
+- Generation (deterministic; regenerating gives byte-identical files):
+    python3 tools/gen_k9_shards.py tools/k7_nl.txt tools/k9_sizes.txt 16 400 8 2400 251 458 tools/k9_s3stats.txt \
+        tools/k8_jcosts.txt
+        (BeatAvg/K/K9/Defs.lean, the shards, BeatAvg/K/K9/costs.txt = estimated seconds per shard, scheduling only)
+    python3 tools/gen_k9_asm.py     (AX, AJ, AB, AS, BeatAvg/K/K9.lean, from the theorem names of the shards)
+  The inputs only size and split the shards (nothing in them is trusted; a wrong value makes a shard slower, never
+  unsound): tools/k7_nl.txt (leaf counts of the level-7 records), tools/k9_sizes.txt (flag counts, checked by the
+  length theorems), tools/k9_s3stats.txt (native statistics of the stage-3 units: first candidates, partial tuples,
+  9-tuples reached and passed to the bound; from tools/k9s3stats.lean), tools/k8_jcosts.txt (user seconds of the
+  k = 8 join shards, which visit the same 8-tuples).
+
+Build (from the project root; per-shard time and memory: run/k9K_run_final.txt; the final module: run/k9K_final_time.txt,
+fields exit, user s, wall s, max RSS KB)
+
+  lake build BeatAvg.Check.K9K BeatAvg.Check.K9KS3 BeatAvg.Check.KPack BeatAvg.K.Enum BeatAvg.Prob.NonVacuity \
+             BeatAvg.K.Split BeatAvg.K.Split8 BeatAvg.Core.KPack BeatAvg.Core.K9K
+  # data modules and Defs: compile with lean directly (lake would also emit C for the large data modules); first the
+  # modules of the certificate (Load, the trees, the blocks, the lists S and core), then the kernel tables
+  LP=$(lake env printenv LEAN_PATH); O=$PWD/.lake/build/lib/lean
+  for m in Load Data/K8/Trees Data/K9/Blocks Data/K9/Extra Data/K9; do \
+    mkdir -p $(dirname $O/BeatAvg/$m); LEAN_PATH=$LP lean -o $O/BeatAvg/$m.olean BeatAvg/$m.lean; done
+  for m in T9 Pat Idx0 Idx1 Idx2 Idx3 Idx4 Idx5 Idx6 Q0 Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q8 Q9 Q10 Q11 Q12 Q13 Q14 Q15 Q R0 R Core; do \
+    mkdir -p $O/BeatAvg/Data/K9K; LEAN_PATH=$LP lean -o $O/BeatAvg/Data/K9K/$m.olean BeatAvg/Data/K9K/$m.lean; done
+  LEAN_PATH=$LP lean -o $O/BeatAvg/K/K9/Defs.olean BeatAvg/K/K9/Defs.lean
+  MALLOC_ARENA_MAX=1 SHARD_THREADS=1 SHARD_MEM_GB=2048 python3 tools/run_shards.py LOGDIR JOBS $(sort -k2 -n -r BeatAvg/K/K9/costs.txt | cut -d' ' -f1)
+  awk '$2 != 0' LOGDIR/summary.txt          # must print nothing (exit status of every shard 0)
+  MALLOC_ARENA_MAX=1 SHARD_MEM_GB=4096 python3 tools/run_shards.py LOGDIR 4 BeatAvg.K.K9.AX BeatAvg.K.K9.AJ BeatAvg.K.K9.AB BeatAvg.K.K9.AS
+  LEAN_PATH=$LP lean -o $O/BeatAvg/K/K9.olean -i $O/BeatAvg/K/K9.ilean BeatAvg/K/K9.lean
+  printf 'import BeatAvg.K.K9\n#print axioms BeatAvg.K.upperBound_k9\n#print axioms BeatAvg.K.upperBoundRV_k9\n#print axioms BeatAvg.K.C639_le_k9\n' > ax.lean
+  LEAN_PATH=$LP lean ax.lean
+Checked on a clean copy (Mathlib packages only, no other build output) on 2026-10-22: the steps above through Defs,
+and four shards (Cnt, V0, P0, W0).
+
+run_shards.py compiles each module with `lean -j1 -o … -i …` (SHARD_ILEAN=0 skips the .ilean) under an
+address-space cap (RLIMIT_AS = SHARD_MEM_GB). The cap must be large: a -j1 lean process runs about one thread per
+theorem of the module, each with a ~1 GB address-space reservation, and the kernel's cache tables reserve more; under
+small caps thread creation fails with "failed to create thread: Resource temporarily unavailable". Kernel memory grows
+within a theorem (~0.1 GB per second of kernel time in stage 3), which is why stage-3 theorems are kept under ~2 min
+and join theorems under ~5 min. MALLOC_ARENA_MAX=1: Lean checks each theorem on its own thread, and with per-thread
+malloc arenas the freed caches of earlier theorems are not reused (a 9-theorem row shard peaked at 26 GB with one arena,
+over 52 GB without). Do not `lake build BeatAvg.K.K9`: it would compile the shards with one thread per
+core each, in parallel, and recompile the shards compiled outside Lake.
+
+Data provenance (nothing is trusted: the checks recompute or verify every entry that is used)
+- Data/K9.lean, Data/K9/*.lean and Data/K8/Trees.lean: as in lean/k789 (the N track).
+- Data/K9K/*.lean = output of tools/k9ktool.lean, run natively (T9, Pat, Idx0-Idx6, Q0-Q15, Q, R0, R, Core and
+  k9_sizes.txt), after the Build steps up to the modules of the certificate (tools/k9ktool.lean imports
+  BeatAvg.Data.K9); OUT is a new directory, whose files are then compared with SHA256SUMS:
+    for m in Tuples Rows Tree Direct Chain Hier Hier9 KTab K7K; do lake build BeatAvg.Core.$m:dynlib; done
+    D=$PWD/.lake/build/lib/lean; DL=""
+    for m in Tuples Rows Tree Direct Chain Hier Hier9 KTab K7K; do DL="$DL --load-dynlib=$D/BeatAvg_BeatAvg_Core_$m.so"; done
+    LEAN_PATH=$LP lean $DL --run tools/k9ktool.lean OUT      # n7 136800, w7 280, wq8 136, wq9 135, core 458;
+    # ~76 min on 16 vCPUs; the 29 files and k9_sizes.txt came out byte-identical (checked 2026-10-22)
+- tools/k9_s3stats.txt = the output of tools/k9s3stats.lean (statistics only).
+
+Our run (2026-10-21/22; every shard with `lean -j1` under run_shards.py with MALLOC_ARENA_MAX=1 and SHARD_MEM_GB=2048;
+per-shard user time, wall time, maximum RSS and machine group in run/k9K_run_final.txt, one successful run per module).
+Machine groups by vCPUs and memory:
+  a: 16 vCPUs, 104 GiB: data modules (tools/k9ktool.lean outputs; the (6,7) row tables Q0-Q15 at depth 10 took 43-376 s
+     each), Defs, and the assembly AX (15 s), AB (51 s), AS (206 s, 9.2 GiB), AJ (13 s), BeatAvg/K/K9.lean (5.5 s user, 8.7 s wall, 7.1 GiB; run/k9K_final_time.txt);
+  b: 96 vCPUs, 768 GB: the 61 row shards M (16 at a time), then joins;
+  c, d, f: 96 vCPUs, 624 GB: all other shards, 60-75 per machine in parallel.
+  The joins started on spare slots next to the other shards; a loop on each machine kept about 75-80 shards running.
+  Before the run, pilots of every shard kind on a: the largest (6,7) block (625 flags) failed for rows 512-624, since
+  row trees of depth 9 hold 512 rows; the rows are now read at depth 10 (see Structure), and the pilot passes.
+Totals: 2,943 shards plus AX, AJ, AB, AS, all exit 0; no shard failed or was stopped by the memory guards.
+  2,044 CPU-h of user time: J 1,475 (median 2,733 s per shard; longest J1332, 18,524 s / 19,200 s wall),
+  S2 + S3 507, X 30, F 11, M 9, C 6, P 3, the rest under 2.
+  Largest RSS 42.0 GiB (a join shard); stage-3 shards up to 25.5 GiB; row shards up to 36.3 GiB.
+  The join shards were sized from the measured k = 8 join costs; the slowest ones (J1332, J1635, J1334) cover parents
+  whose k = 8 costs were still estimates when tools/k8_jcosts.txt was written (5,092 s against 13,246 s and 11,359 s
+  measured later), so they ran 3-8x their estimate.
+Axioms: run/k9K_axioms.txt (propext, Classical.choice, Quot.sound for all three finals).
