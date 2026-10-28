@@ -1,0 +1,434 @@
+\documentclass[11pt]{amsart}
+\pdfsuppressptexinfo=-1
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,enumitem,array,placeins}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={A certified upper bound for the beat the average game},
+  pdfauthor={Tejasvi Singh Tomar}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\numberwithin{equation}{section}
+\setlength{\emergencystretch}{2em}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cJ}{\mathcal{J}}
+\newcommand{\fl}{\operatorname{fl}}
+\newcommand{\val}{\operatorname{val}}
+\newcommand{\capv}{\mathrm{cap}}
+\newcommand{\cS}{\mathcal{S}}
+
+% ---------------------------------------------------------------------------
+% Values of the certificates (Table 1).
+\newcommand{\BOUNDF}{20034817/50000000}
+\newcommand{\BOUNDD}{0.40069634}
+\newcommand{\CAPF}{20039817/50000000}
+\newcommand{\THRF}{19994817/50000000}
+\newcommand{\EXMAX}{0.4006963371\ldots}
+\newcommand{\GAPEXACT}{9.6767\ldots\cdot10^{-7}}
+\newcommand{\NEXCLEIGHT}{29}
+\newcommand{\NEXCLNINE}{19}
+\newcommand{\NCORE}{458}
+\newcommand{\NBLKNINE}{1{,}418}
+\newcommand{\NFLAGNINE}{47{,}632}
+\newcommand{\ZENODODOI}{10.5281/zenodo.23716000}
+\newcommand{\REPOURL}{https://github.com/tejasvi/beat-the-average-bound/tree/v6}
+\newcommand{\BOUNDEIGHTF}{4006983/10000000}
+\newcommand{\EXMAXEIGHT}{0.4006982904\ldots}
+\newcommand{\NTOPBLK}{596}
+\newcommand{\NBLK}{631}
+\newcommand{\NPAT}{45{,}319{,}744}
+\newcommand{\WDEN}{2^{50}}
+\newcommand{\NDUAL}{27}
+\newcommand{\DUALMASS}{99.97\%}
+\newcommand{\NEXT}{162}
+% Lean proofs (Section 6).
+\newcommand{\LEANVER}{4.35.0-rc3}
+\newcommand{\MATHLIBTAG}{v4.35.0-rc3}
+\newcommand{\MATHLIBCOMMIT}{c55e6e786f49}
+% ---------------------------------------------------------------------------
+
+\raggedbottom
+\begin{document}
+
+\title{A certified upper bound for the beat the average game}
+\author{Tejasvi Singh Tomar}
+\renewcommand{\urladdrname}{{\itshape ORCID}}
+\urladdr{\href{https://orcid.org/0000-0003-4668-3639}{https://orcid.org/0000-0003-4668-3639}}
+\subjclass[2020]{60E15; 90C22, 52C35, 68V05, 68V20}
+\keywords{beat the average game, flag algebras, semidefinite programming, Gordan certificates, computer-assisted proof, Lean 4}
+
+\begin{abstract}
+Let $C$ be the supremum of $\Prob[X_1+X_2+X_3<2X_4]$ over all probability measures on $[0,\infty)$, where $X_1,\dots,X_4$ are independent with the given law. Determining $C$ is Problem~6.39, the beat the average game, in the list of Georgiev, G\'omez-Serrano, Tao and Wagner. Bellec and Fritz proved $0.4006953\le C\le 673/1615$ and conjectured that the lower bound, $0.4006953723\ldots$, is the exact value. We prove $C\le\BOUNDD$, less than $10^{-6}$ above the conjectured value. The proof applies Razborov's flag algebra method to samples of nine points. Since the points are independent, the positivity constraints of flag algebras hold for every single measure, so that no limit objects are needed. An exact certificate is checked in rational arithmetic, and the bound is also proved in the Lean~4 proof assistant, with Lean's kernel checking the certificate.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}\label{sec:intro}
+\enlargethispage{\baselineskip}
+
+For a probability measure $\mu$ on $[0,\infty)$ let $X_1,X_2,\dots$ be independent random variables with law $\mu$, and put
+\[
+P(\mu)=\Prob[X_1+X_2+X_3<2X_4],\qquad C=\sup_\mu P(\mu).
+\]
+Fritz asked for the value of $C$ on MathOverflow \cite{Fri24}. Determining $C$ is Problem~6.39 in the list of Georgiev, G\'omez-Serrano, Tao and Wagner \cite{GGTW25}, who call it the beat the average game. The name comes from a game with three dice, in which the casino maximizes $\Prob[2X_1<X_2+X_3]$ \cite[Section~1]{BF26}. Bellec and Fritz \cite{BF26} proved
+\begin{equation}\label{eq:BF}
+0.4006953\ldots=\max_{0<p<1}\frac{p(2-p)}{1+p+p^2+p^3}\;\le\; C\;\le\;\frac{673}{1615}<0.41672 .
+\end{equation}
+Their lower bound comes from measures with an atom of mass $p$ at $0$ and equal masses at the points $1-2^{-i}$ for $1\le i\le N$, and a scaling construction repeats this configuration at smaller and smaller scales \cite[Propositions~3.3 and~4.1]{BF26}. The maximum in \eqref{eq:BF} is attained at the root $p^*=0.4743464\ldots$ of $p^4-4p^3-3p^2-2p+2$ in $(0,1)$ \cite[Remark~4.2]{BF26}. Yu \cite{Yu24} pointed out that this value of $p$ improves on $p=1/2$. Bellec and Fritz conjectured that the lower bound in \eqref{eq:BF} is the exact value of $C$ \cite[Conjecture~5.1]{BF26}. A computer search with the method of \cite{AE25} found a measure with $P(\mu)\ge0.389$ \cite{GGTW25}.
+
+The upper bound in \eqref{eq:BF} rests on a lemma that Bellec and Fritz attribute to a MathOverflow answer of Lacker \cite[Lemma~2.3]{BF26}. For every $m\ge4$, it bounds $C$ by the largest fraction of the $4\binom m4$ inequalities $x_a+x_b+x_c<2x_d$ among $m$ nonnegative reals that can hold simultaneously. Bellec and Fritz computed this fraction for $m=20$ by mixed-integer linear programming. For $m=25$ their computation gives $20898/50600<0.41301$, but they do not have a proof of this bound \cite[Section~4]{BF26}.
+
+\begin{theorem}\label{thm:main}
+For every probability measure $\mu$ on $[0,\infty)$ we have $P(\mu)\le\BOUNDF$. Together with \eqref{eq:BF}, this gives $0.4006953\le C\le\BOUNDD$.
+\end{theorem}
+
+The upper bound of Theorem~\ref{thm:main} exceeds the conjectured value $C^*=0.4006953723\ldots$ by $\GAPEXACT$. With six, seven and eight points the same method gives the bounds $C\le0.402546$, $C\le0.40076$ and $C\le0.4006983$ (Table~\ref{tab:cert}).
+
+\subsection*{The method}
+By Lemma~\ref{lem:reduce}, $C$ is already the supremum of $P(\mu)$ over the absolutely continuous measures $\mu$, so we may assume that $\mu$ is absolutely continuous. We sample $k$ points from $\mu$, sort them as $y_1<\dots<y_k$, and record which of the $4\binom k4$ inequalities $2y_d>y_a+y_b+y_c$ with distinct indices hold. This is the sign pattern of the sample. A pattern is realizable if it is the sign pattern of some points $0<y_1<\dots<y_k$ at which none of the inequalities is an equality. Then $P(\mu)$ is the expected fraction of the inequalities that hold (Lemma~\ref{lem:average}), and Lacker's lemma bounds this expectation by its maximum over the realizable patterns. This bound ignores that the sample is independent. Fix $t$ of the sample points and two disjoint groups of $m-t$ further ones, all chosen by their indices before sorting; this needs $2m-t\le k$. Given the fixed points, the two groups are independent and have the same law. Hence the matrix of the probabilities that the first group forms one sign pattern with the fixed points and the second group another is positive semidefinite. This is the positivity used in Razborov's flag algebras \cite{Raz07}, and for independent samples it holds for every single measure (Lemma~\ref{lem:pos}). We combine these constraints in a semidefinite program (Theorem~\ref{thm:bound} and Section~\ref{sec:cert}). Its solution consists of positive semidefinite matrices, called blocks, each indexed by flags (sign patterns of $m$ points of which $t$ are marked) whose marked points have the same pattern, and it gives each pattern a value: the fraction of its true inequalities plus correction terms from the blocks. The largest value over the realizable patterns is an upper bound for $C$.
+
+For the proof of Theorem~\ref{thm:main} we take $k=9$. The certificate is arranged so that the exact check runs on patterns of $8$ points, apart from two small classes of patterns of $9$ points (Lemma~\ref{lem:hier}), and Gordan certificates, which show that systems of strict linear inequalities have no solution, prove that the patterns that would violate the bound cannot occur (Sections~\ref{sec:complete} and~\ref{sec:cert}). The certificate is verified by two independently written programs in exact arithmetic and, in a formal proof in the Lean~4 proof assistant that follows Sections~\ref{sec:patterns} to~\ref{sec:cert}, by Lean's kernel (Section~\ref{sec:lean}).
+
+Sections~\ref{sec:patterns} to~\ref{sec:cert} give the proof, Section~\ref{sec:lean} the formal proofs, and Section~\ref{sec:dual} compares the dual solution with the construction of Bellec and Fritz and asks whether a certificate of this kind with some finite $k$ reaches $C^*$.
+
+\section{Sign patterns of samples}\label{sec:patterns}
+
+We first express $P(\mu)$ through the distribution of a finite combinatorial object. For $k\ge1$ write $[k]=\{1,\dots,k\}$ and
+\[
+T_k=\bigl\{(d;a,b,c):\ d\in[k],\ a<b<c,\ \{a,b,c\}\subseteq[k]\setminus\{d\}\bigr\},\qquad L_\tau(x)=2x_d-x_a-x_b-x_c
+\]
+for $\tau=(d;a,b,c)\in T_k$ and $x\in\R^k$. Then $|T_k|=4\binom k4$; in particular, $T_k$ is empty for $k\le3$. A point $x\in\R^k$ is \emph{generic} if its coordinates are positive and pairwise distinct and $L_\tau(x)\ne0$ for all $\tau\in T_k$. A \emph{$k$-pattern} is a vector $M\in\{0,1\}^{T_k}$. The \emph{pattern} $\pi(x)$ of a generic point $x$ has $\pi(x)_\tau=1$ if $L_\tau(y)>0$ and $\pi(x)_\tau=0$ otherwise, where $y$ is the increasing rearrangement of $x$. A pattern is \emph{realizable} if it is the pattern of a generic point, and $\cR_k$ denotes the set of realizable $k$-patterns. The \emph{density} of a $k$-pattern with $k\ge4$ is $d(M)=|T_k|^{-1}\sum_{\tau}M_\tau$. For a set $U=\{u_1<\dots<u_m\}\subseteq[k]$ the \emph{restriction} $M|_U$ is the $m$-pattern with $(M|_U)_{(d;a,b,c)}=M_{(u_d;u_a,u_b,u_c)}$. If $x$ is generic with increasing rearrangement $y$, then $\pi(x)|_U$ is the pattern of $(y_{u_1},\dots,y_{u_m})$.
+
+\begin{lemma}\label{lem:reduce}
+$C$ is the supremum of $P(\mu)$ over the absolutely continuous probability measures $\mu$ with $\mu((0,\infty))=1$.
+\end{lemma}
+
+\begin{proof}
+Let $\mu$ be a probability measure on $[0,\infty)$ and $\varepsilon>0$. Let $U_1,\dots,U_4$ be uniform on $[0,1]$, with $X_1,\dots,X_4,U_1,\dots,U_4$ independent, and put $Y_i=X_i+\varepsilon(1+U_i)$. The $Y_i$ are independent with a common law $\mu_\varepsilon$, which is absolutely continuous and satisfies $\mu_\varepsilon([\varepsilon,\infty))=1$. We have
+\[
+Y_1+Y_2+Y_3-2Y_4=X_1+X_2+X_3-2X_4+\varepsilon(1+U_1+U_2+U_3-2U_4),
+\]
+and the last term is at most $4\varepsilon$. Hence $P(\mu_\varepsilon)\ge\Prob[X_1+X_2+X_3-2X_4<-4\varepsilon]$, and the right side tends to $P(\mu)$ as $\varepsilon\to0$. So the supremum in the lemma is at least $P(\mu)$. The reverse inequality holds because the supremum runs over a subset of the measures in the definition of $C$.
+\end{proof}
+
+\begin{lemma}\label{lem:generic}
+Let $\mu$ have no atoms and satisfy $\mu((0,\infty))=1$. Then $(X_1,\dots,X_k)$ is generic almost surely.
+\end{lemma}
+
+\begin{proof}
+For $i\ne j$ we have $\Prob[X_i=X_j]=\int\mu(\{x\})\,d\mu(x)=0$. For $\tau=(d;a,b,c)$ the variable $X_d$ is independent of $(X_a,X_b,X_c)$, so $\Prob[L_\tau(X)=0]=\E\,\mu(\{(X_a+X_b+X_c)/2\})=0$. The coordinates are positive almost surely because $\mu((0,\infty))=1$.
+\end{proof}
+
+For such $\mu$ we write $p_\mu(M)=\Prob[\pi(X_1,\dots,X_k)=M]$. By Lemma~\ref{lem:generic}, $p_\mu$ is a probability vector supported on $\cR_k$.
+
+\begin{lemma}\label{lem:average}
+Let $k\ge4$, and let $\mu$ have no atoms and satisfy $\mu((0,\infty))=1$. Then $P(\mu)=\sum_Mp_\mu(M)\,d(M)$.
+\end{lemma}
+
+\begin{proof}
+Let $x\in\R^k$ be generic and let $\sigma$ be the permutation of $[k]$ with $x_{\sigma(1)}<\dots<x_{\sigma(k)}$, so that $y=(x_{\sigma(1)},\dots,x_{\sigma(k)})$ is the increasing rearrangement of $x$. For $\tau=(d;a,b,c)$ let $\sigma(\tau)\in T_k$ be the tuple with first entry $\sigma(d)$ and remaining entries $\sigma(a),\sigma(b),\sigma(c)$ in increasing order. Then $\tau\mapsto\sigma(\tau)$ is a bijection of $T_k$ and $L_\tau(y)=L_{\sigma(\tau)}(x)$. Hence $|T_k|\,d(\pi(x))$ is the number of $\tau\in T_k$ with $L_\tau(x)>0$. We apply this to $X=(X_1,\dots,X_k)$ and take expectations:
+\[
+|T_k|\sum_Mp_\mu(M)\,d(M)=\sum_{\tau\in T_k}\Prob[L_\tau(X)>0].
+\]
+For $\tau=(d;a,b,c)$ the vector $(X_a,X_b,X_c,X_d)$ has the law of $(X_1,X_2,X_3,X_4)$, so every term on the right equals $P(\mu)$.
+\end{proof}
+
+Since $p_\mu$ is supported on $\cR_k$, Lemmas~\ref{lem:reduce} and~\ref{lem:average} give $C\le\max_{M\in\cR_k}d(M)$. This is the bound of Lacker's lemma with $m=k$, because a point of $[0,\infty)^k$ can be perturbed to a generic point without violating the strict inequalities that it satisfies.
+
+\begin{remark}\label{rem:sorting}
+Two features of sorted patterns matter below. First, a permutation of the sample points permutes $T_k$, so the fraction of the inequalities that hold, and the flag counts of Section~\ref{sec:flags}, depend on a sample only through its pattern (proofs of Lemmas~\ref{lem:average} and~\ref{lem:pos}). Second, realizability refers to points with positive coordinates, and this condition cannot be dropped. Indeed, $L_\tau$ is not invariant under translations. If $Z_1,\dots,Z_4$ are independent and identically distributed, then
+\[
+\Prob[(Z_1-c)+(Z_2-c)+(Z_3-c)<2(Z_4-c)]=\Prob[Z_1+Z_2+Z_3-2Z_4<c],
+\]
+which tends to $1$ as $c\to\infty$. For this reason the inequality $x_1>0$ appears in every system of Section~\ref{sec:complete}.
+\end{remark}
+
+\section{Positivity from independence}\label{sec:flags}
+
+We now derive the constraints that independence imposes on $p_\mu$. Fix integers $0\le t\le m$. A \emph{flag} of size $m$ with $t$ marked points is a pair $F=(N,J)$ of an $m$-pattern $N$ and a set $J\subseteq[m]$ with $|J|=t$. Its \emph{type} is the $t$-pattern $N|_J$. Let $k\ge2m-t$ and let $M$ be a $k$-pattern. For disjoint sets $J,A\subseteq[k]$ with $|J|=t$ and $|A|=m-t$ put
+\[
+\fl(M;J,A)=(M|_{J\cup A},J'),
+\]
+where $J'\subseteq[m]$ is the set of positions of the elements of $J$ in the increasing enumeration of $J\cup A$. For flags $F,G$ of size $m$ with $t$ marked points let
+\begin{equation}\label{eq:c}
+c(F,G;M)=\frac1{D}\,\#\bigl\{(J,A,B):\ \fl(M;J,A)=F,\ \fl(M;J,B)=G\bigr\},
+\end{equation}
+where $(J,A,B)$ runs over the triples of pairwise disjoint subsets of $[k]$ with $|J|=t$ and $|A|=|B|=m-t$, and $D=\binom kt\binom{k-t}{m-t}\binom{k-m}{m-t}$ is the number of these triples. Since $\fl(M;J,A)$ and $\fl(M;J,B)$ both have type $M|_J$, we have $c(F,G;M)=0$ unless $F$ and $G$ have the same type. Exchanging $A$ and $B$ shows that $c(F,G;M)=c(G,F;M)$.
+
+\begin{lemma}\label{lem:pos}
+Let $\mu$ have no atoms and satisfy $\mu((0,\infty))=1$, and let $k\ge2m-t$. Let $\cF$ be a finite set of flags of size $m$ with $t$ marked points, and let $Q=(Q_{FG})_{F,G\in\cF}$ be a positive semidefinite matrix. Then
+\[
+\sum_Mp_\mu(M)\sum_{F,G\in\cF}Q_{FG}\,c(F,G;M)\;\ge\;0.
+\]
+\end{lemma}
+
+\begin{proof}
+For a point $z$ with positive coordinates indexed by a finite set $I$, and for disjoint $J,A\subseteq I$ with $|J|=t$ and $|A|=m-t$, we define $g(z;J,A)$ as follows. If the values $z_i$ with $i\in J\cup A$ are pairwise distinct and, listed in increasing order, form a generic point $w\in\R^m$, then $g(z;J,A)=(\pi(w),J')$, where $J'\subseteq[m]$ is the set of positions of the values $z_j$ with $j\in J$ in this list. Otherwise $g(z;J,A)=\ast$, a symbol that is not a flag.
+
+Let $x\in\R^k$ be generic and let $\sigma$ be the permutation of $[k]$ with $x_{\sigma(1)}<\dots<x_{\sigma(k)}$. Then $\fl(\pi(x);J,A)=g(x;\sigma(J),\sigma(A))$, since both sides are read off from the increasing list of the values $x_{\sigma(i)}$ with $i\in J\cup A$. As $\sigma$ permutes the triples $(J,A,B)$,
+\begin{equation}\label{eq:cg}
+c(F,G;\pi(x))=\frac1D\,\#\bigl\{(J,A,B):\ g(x;J,A)=F,\ g(x;J,B)=G\bigr\}.
+\end{equation}
+Let $X=(X_1,\dots,X_k)$. By Lemma~\ref{lem:generic} and \eqref{eq:cg},
+\[
+\sum_Mp_\mu(M)\,c(F,G;M)=\frac1D\sum_{(J,A,B)}\Prob\bigl[g(X;J,A)=F,\ g(X;J,B)=G\bigr].
+\]
+Put $J_0=\{1,\dots,t\}$, $A_0=\{t+1,\dots,m\}$ and $B_0=\{m+1,\dots,2m-t\}$. For each triple $(J,A,B)$ there is a permutation $\rho$ of $[k]$ with $\rho(J_0)=J$, $\rho(A_0)=A$ and $\rho(B_0)=B$. The vector $X\circ\rho=(X_{\rho(1)},\dots,X_{\rho(k)})$ has the same law as $X$, and $g(X;J,A)=g(X\circ\rho;J_0,A_0)$ and $g(X;J,B)=g(X\circ\rho;J_0,B_0)$. Hence each term of the sum equals $\Prob[g(X;J_0,A_0)=F,\ g(X;J_0,B_0)=G]$.
+
+The vectors $W=(X_1,\dots,X_t)$, $Y=(X_{t+1},\dots,X_m)$ and $Y'=(X_{m+1},\dots,X_{2m-t})$ are independent, and $Y$ and $Y'$ have the same law. For $w\in(0,\infty)^t$ let $\varphi_F(w)=\Prob[g((w,Y);J_0,A_0)=F]$. The flag $g(X;J_0,A_0)$ depends only on $(W,Y)$, and $g(X;J_0,B_0)$ is the same function of $(W,Y')$. By Fubini's theorem,
+\[
+\Prob\bigl[g(X;J_0,A_0)=F,\ g(X;J_0,B_0)=G\bigr]=\E\bigl[\varphi_F(W)\,\varphi_G(W)\bigr].
+\]
+Therefore the sum in the lemma equals $\E\bigl[\sum_{F,G\in\cF}Q_{FG}\,\varphi_F(W)\varphi_G(W)\bigr]$, which is nonnegative because $Q$ is positive semidefinite.
+\end{proof}
+
+\begin{remark}\label{rem:flags}
+The flags in Lemma~\ref{lem:pos} need not be realizable or share a type. Up to normalization, $c(F,G;M)$ is the coefficient of $M$ in the averaged product of $F$ and $G$ in Razborov's flag algebra \cite{Raz07}, and Lemma~\ref{lem:pos} is the counterpart of the positivity of averaged squares. Razborov proves this positivity for limits of sequences of finite structures; Lemma~\ref{lem:pos} needs neither limit objects nor de Finetti's theorem. Our structures are linearly ordered and have no nontrivial automorphisms, as in the flag algebras of permutations \cite{BHLPUV15,SS18}. This is why a flag can be written as a pattern together with a set of positions.
+\end{remark}
+
+\begin{theorem}\label{thm:bound}
+Let $k\ge4$, and let $\cP$ be a set of $k$-patterns with $\cR_k\subseteq\cP$. For $b=1,\dots,r$ let $\cF_b$ be a finite set of flags of size $m_b$ with $t_b$ marked points, where $2m_b-t_b\le k$, and let $Q_b$ be a positive semidefinite matrix indexed by $\cF_b$. For a $k$-pattern $M$ put
+\begin{equation}\label{eq:val}
+\val(M)=d(M)+\sum_{b=1}^r\ \sum_{F,G\in\cF_b}(Q_b)_{FG}\,c(F,G;M).
+\end{equation}
+Then $C\le\max_{M\in\cP}\val(M)$.
+\end{theorem}
+
+\begin{proof}
+Let $\mu$ be absolutely continuous with $\mu((0,\infty))=1$. By Lemma~\ref{lem:average} and by Lemma~\ref{lem:pos} for each $b$,
+\[
+P(\mu)=\sum_Mp_\mu(M)\,d(M)\le\sum_Mp_\mu(M)\val(M)\le\max_{M\in\cP}\val(M),
+\]
+where the last step holds because $p_\mu$ is a probability vector supported on $\cR_k\subseteq\cP$. Lemma~\ref{lem:reduce} completes the proof.
+\end{proof}
+
+Patterns in $\cP\setminus\cR_k$ can only weaken the bound. Hence it suffices to know a superset of $\cR_k$, and we construct one next.
+
+\section{Completeness of the list of patterns}\label{sec:complete}
+
+We build sets $\cP_k\supseteq\cR_k$ by adding one point at a time. Restricting a generic point to a subset of its coordinates gives a generic point, so $M|_U\in\cR_{|U|}$ for all $M\in\cR_k$ and $U\subseteq[k]$. In particular each $M\in\cR_k$ extends the pattern $M|_{[k-1]}\in\cR_{k-1}$ by its values on the $4\binom{k-1}3$ tuples of $T_k\setminus T_{k-1}$, the tuples that contain $k$.
+
+Let $P$ be a $(k-1)$-pattern, let $n=|T_k\setminus T_{k-1}|$, and fix an enumeration $\tau_1,\dots,\tau_n$ of $T_k\setminus T_{k-1}$, which may depend on $P$. For $s\in\{0,1\}^i$ with $0\le i\le n$ let $S_P(s)$ be the system of strict inequalities
+\begin{gather*}
+x_1>0,\qquad x_{j+1}-x_j>0\ \ (1\le j<k),\\
+(2P_\tau-1)L_\tau(x)>0\ \ (\tau\in T_{k-1}),\qquad (2s_j-1)L_{\tau_j}(x)>0\ \ (1\le j\le i)
+\end{gather*}
+in $x\in\R^k$. Each inequality has the form $r\cdot x>0$ with $r\in\Z^k$. A \emph{Gordan certificate} for a system of such inequalities consists of nonnegative integers $y_r$, one for each inequality and not all zero, with $\sum_ry_r\,r=0$. A system with a Gordan certificate has no solution, since a solution $x$ would give $0=\sum_ry_r\,(r\cdot x)>0$. Conversely, by Gordan's theorem \cite{Gor73}, every system of strict homogeneous linear inequalities with rational coefficients and without a solution has a certificate with rational entries, and hence one with integer entries.
+
+An \emph{extension tree} for $P$ is a set $\cT$ of sign vectors of lengths $0,\dots,n$ that contains the empty vector and all prefixes of its elements, such that for each $s\in\cT$ of length $i<n$ and each $e\in\{0,1\}$ either $(s,e)\in\cT$ or $S_P(s,e)$ has a Gordan certificate. A vector $s\in\cT$ of length $n$ is a \emph{leaf}, and it defines the $k$-pattern that agrees with $P$ on $T_{k-1}$ and takes the value $s_j$ at $\tau_j$.
+
+\begin{proposition}\label{prop:complete}
+Let $\cP_{k-1}$ be a set of $(k-1)$-patterns with $\cR_{k-1}\subseteq\cP_{k-1}$, and fix an extension tree for each $P\in\cP_{k-1}$. Then the set $\cP_k$ of the patterns defined by the leaves of these trees satisfies $\cR_k\subseteq\cP_k$.
+\end{proposition}
+
+\begin{proof}
+Let $M\in\cR_k$. Then $M=\pi(x)$ for a generic $x$ with $0<x_1<\dots<x_k$, and $P=M|_{[k-1]}\in\cR_{k-1}\subseteq\cP_{k-1}$. Put $s_j=M_{\tau_j}$ in the enumeration of the tree for $P$. For each $i$, the point $x$ solves $S_P(s_1,\dots,s_i)$, so this system has no Gordan certificate. By induction on $i$, the vector $(s_1,\dots,s_i)$ belongs to the tree for all $i\le n$. The leaf $(s_1,\dots,s_n)$ defines $M$.
+\end{proof}
+
+Starting from the set $\cP_3=\cR_3$ of the single empty pattern, Proposition~\ref{prop:complete} produces sets $\cP_4,\dots,\cP_7$ that contain all realizable patterns. We computed the trees by linear programming with HiGHS \cite{HiGHS}, and kept a leaf only together with an integer point that realizes its pattern.
+
+A second enumeration walks through the cells of the arrangement of the hyperplanes $L_\tau=0$ inside the cone $0<x_1<\dots<x_k$ by changing one sign at a time. Since these hyperplanes are pairwise distinct and distinct from the walls of the cone, a generic segment between two cells crosses them one at a time; hence the walk reaches every cell. Each step is settled in one of three ways: by an integer point, by a Gordan certificate, or, for $k=7$, by a restriction to $6$ points that is not in the list that the walk found for $k=6$. It finds the same sets for $k\le7$, with an integer point for each pattern. We check these points against the patterns rebuilt from the trees. Hence $\cP_k=\cR_k$ for $k\le7$, although the proof uses only $\cR_k\subseteq\cP_k$.
+
+The maximal density is $1/2$ on $\cP_4$ and on $\cP_5$, and Table~\ref{tab:cert} gives it for $k=6,7,8$. As a check, the value $7/15$ for $k=6$ agrees with the computation of Bellec and Fritz for $m=6$ \cite[Section~4]{BF26}.
+
+\subsection*{Eight and nine points}
+For $k\ge8$ we do not build extension trees; instead, we form the candidates by joins, as described below. For a $k$-pattern $M$ let $S(M)$ be the system
+\[
+x_1>0,\qquad x_{j+1}-x_j>0\ \ (1\le j<k),\qquad (2M_\tau-1)L_\tau(x)>0\ \ (\tau\in T_k).
+\]
+If $M=\pi(x)$ for a generic point $x$ with $0<x_1<\dots<x_k$, then $x$ solves $S(M)$. Hence a $k$-pattern $M$ for which $S(M)$ has a Gordan certificate is not realizable. Let $\cJ_8$ be the set of $8$-patterns $M$ with $M|_U\in\cP_7$ for every $7$-element set $U\subseteq[8]$.
+
+\begin{lemma}\label{lem:excl}
+Let $\cR_7\subseteq\cP_7$, and let $E$ be a set of $8$-patterns $M$ such that $S(M)$ has a Gordan certificate. Then $\cP_8=\cJ_8\setminus E$ satisfies $\cR_8\subseteq\cP_8$.
+\end{lemma}
+
+\begin{proof}
+Let $M\in\cR_8$, realized by a generic point $x$ with $0<x_1<\dots<x_8$. Then $M|_U\in\cR_7\subseteq\cP_7$ for every $7$-element set $U$, so $M\in\cJ_8$. The point $x$ solves $S(M)$, so $M\notin E$.
+\end{proof}
+
+A $k$-pattern is determined by its restrictions to the $(k-1)$-element subsets of $[k]$, and these restrictions satisfy compatibility conditions that also suffice.
+
+\begin{lemma}\label{lem:glue}
+Let $k\ge5$.
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item For a $k$-pattern $M$ and $1\le i<j\le k$, the restriction of $M|_{[k]\setminus\{i\}}$ to $[k-1]\setminus\{j-1\}$ and the restriction of $M|_{[k]\setminus\{j\}}$ to $[k-1]\setminus\{i\}$ both equal $M|_{[k]\setminus\{i,j\}}$.
+\item Let $N_1,\dots,N_k$ be $(k-1)$-patterns with $N_i|_{[k-1]\setminus\{j-1\}}=N_j|_{[k-1]\setminus\{i\}}$ for all $1\le i<j\le k$. Then there is exactly one $k$-pattern $M$ with $M|_{[k]\setminus\{i\}}=N_i$ for all $i\in[k]$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+If $U=\{u_1<\dots<u_m\}\subseteq[k]$ and $V\subseteq[m]$, then $(M|_U)|_V=M|_{\{u_v:\,v\in V\}}$ by the definition of restrictions. For $U=[k]\setminus\{i\}$ the point $j$ is $u_{j-1}$, and for $U=[k]\setminus\{j\}$ the point $i$ is $u_i$. This proves~(a). For~(b), let $\tau\in T_k$. Since $\tau$ involves four points and $k\ge5$, some $u\in[k]$ does not occur in $\tau$. Let $M_\tau$ be the entry of $N_u$ at the tuple that $\tau$ becomes when the points of $[k]\setminus\{u\}$ are numbered increasingly. If $u<v$ both do not occur in $\tau$, then the entries of $N_u$ and $N_v$ obtained in this way are the entries of $N_u|_{[k-1]\setminus\{v-1\}}$ and $N_v|_{[k-1]\setminus\{u\}}$ at the tuple that $\tau$ becomes in $[k]\setminus\{u,v\}$. These two patterns are equal by hypothesis, so $M_\tau$ does not depend on the choice of $u$, and $M|_{[k]\setminus\{u\}}=N_u$ for every $u$. Every tuple of $T_k$ misses some point, so $M$ is the only $k$-pattern with these restrictions.
+\end{proof}
+
+We obtain $\cJ_8$ by joining $\cP_7$ with itself. By Lemma~\ref{lem:glue}, the patterns of $\cJ_8$ correspond to the families $(N_1,\dots,N_8)$ in $\cP_7$ that satisfy the conditions of Lemma~\ref{lem:glue}(b), through $N_i=M|_{[8]\setminus\{i\}}$. We let $N_8$ run over $\cP_7$. For $i\in[7]$ the condition with $j=8$ says that the restriction of $N_i$ to $[6]$, which corresponds to the points $[7]\setminus\{i\}$, equals $N_8|_{[7]\setminus\{i\}}$, and we check the conditions for $1\le i<j\le7$ while the $N_i$ are chosen. This gives $|\cJ_8|=\NPAT$. For nine points we form only the parts of the corresponding join of $\cP_8$ with itself that are needed for Lemma~\ref{lem:hier} (Section~\ref{sec:check}).
+
+\section{The certificate}\label{sec:cert}
+
+The repository given under Data availability holds the search programs, the certificates, the checkers with their validation of the certificate format, the second implementation and its differences from the checkers, and the Lean proofs with their formal statements, builds and further checks.
+
+\subsection{The semidefinite program}
+For fixed $k$, $\cP$ and flag sets $\cF_b$, the best bound that Theorem~\ref{thm:bound} gives is the value of the semidefinite program
+\[
+\text{minimize }\lambda\quad\text{subject to}\quad\lambda\ge\val(M)\ \ (M\in\cP),\qquad Q_b\succeq0\ \ (b=1,\dots,r).
+\]
+Since $c(F,G;M)$ vanishes for flags of different types, we lose nothing by giving each type its own block.
+For $k=8$ the flags $(N,J)$ have $N$ realizable and $(t,m)$ equal to $(1,4)$, $(2,4)$, $(4,5)$, $(5,6)$ or $(6,7)$. These pairs satisfy $2m-t\le8$. There is one $t$-pattern for $t\le3$, and there are $3$, $30$ and $1{,}290$ realizable patterns of $4$, $5$ and $6$ points; each of these types has its own block.
+
+We solved the program numerically with CSDP \cite{Bor99} and rounded the solution (Section~\ref{sec:round}). The solver need not be trusted, because only the rounded matrices enter the proof. The certificate keeps $\NTOPBLK$ of the $1{,}290$ blocks of the pair $(6,7)$ and has $\NBLK$ blocks with $20{,}962$ flags in all.
+
+The certificates for $k=6$ and $k=7$ come from the same program over $\cP_6$ and $\cP_7$, with the pairs $(1,3)$, $(2,4)$, $(3,4)$, $(4,5)$ for $k=6$ and $(1,4)$, $(2,4)$, $(4,5)$, $(5,6)$ for $k=7$. For $m\le3$ all $m$-patterns are empty. Hence $c(F,G;M)$ does not depend on $M$, and the pair $(1,3)$ in the certificate for $k=6$ only adds a nonnegative constant to every value.
+
+For $k=9$ we minimized the bound of Lemma~\ref{lem:hier} below in the same way. The blocks of the pairs $(1,4)$, $(2,4)$, $(4,5)$, $(5,6)$ and $(6,7)$ define a function $f_8$ on $8$-patterns, and the blocks of the pair $(7,8)$ have flags on $\NCORE$ realizable $8$-patterns, chosen among those of largest value for $k=8$. The last program gave $\lambda=0.4006963373$. In the certificate we take $\lambda=\BOUNDF$, this value rounded up to eight decimal places, and $\capv=\CAPF=\lambda+10^{-4}$. The certificate has $\NBLKNINE$ blocks with $\NFLAGNINE$ flags in all.
+
+\subsection{Rounding}\label{sec:round}
+We round each numerical block $\tilde Q$ through an eigendecomposition $\tilde Q=\sum_i\alpha_iu_iu_i^{\mathsf T}$: we discard the smallest eigenvalues, round the scaled vectors $Du_i$ to integer vectors $v_i$ for a power of two $D$, and round the $\alpha_i$ to positive rationals $w_i$. The block of the certificate is the rational matrix
+\[
+Q=\sum_iw_i\,(v_i/D)(v_i/D)^{\mathsf T},
+\]
+which is positive semidefinite by construction. Rounding changes the values $\val(M)$ slightly. We do not estimate this change but evaluate $\val(M)$ exactly for the rounded matrices. For the certificate with $k=8$, exactly two patterns of $\cJ_8$ have $\val(M)>\BOUNDEIGHTF$. Both are unrealizable, the certificate contains a Gordan certificate for each of them, and we apply Lemma~\ref{lem:excl} with $E$ consisting of these two patterns. The claimed bound $\BOUNDEIGHTF$ is the exact maximum $\EXMAXEIGHT$ of $\val$ over $\cP_8=\cJ_8\setminus E$, rounded up to seven decimal places. For the certificate with $k=9$, exactly $\NEXCLEIGHT$ patterns of $\cJ_8$ have $f_8(N)>\capv$, and $\NEXCLNINE$ of the $9$-patterns evaluated in Section~\ref{sec:check} have $\val(M)>\lambda$. All of them are unrealizable, and the certificate contains a Gordan certificate for each of them.
+
+\subsection{Values through restrictions}\label{sec:restr}
+The checkers for $k=8$ and $k=9$ evaluate $\val$ through patterns of fewer points, by the following identities.
+
+\begin{lemma}\label{lem:averaging}
+Let $k\ge5$ and let $M$ be a $k$-pattern. Let $U$ run over the $(k-1)$-element subsets of $[k]$, and read $M|_U$ as a $(k-1)$-pattern.
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item $d(M)=\frac1k\sum_Ud(M|_U)$.
+\item If $2m-t\le k-1$, then $c(F,G;M)=\frac1k\sum_Uc(F,G;M|_U)$ for flags $F,G$ of size $m$ with $t$ marked points.
+\item If $(t,m)=(k-2,k-1)$, then $c(F,G;M)$ is $\frac1{k(k-1)}$ times the number of ordered pairs $(a,b)$ of distinct elements of $[k]$ with $F=\fl(M;[k]\setminus\{a,b\},\{a\})$ and $G=\fl(M;[k]\setminus\{a,b\},\{b\})$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+A triple $(J,A,B)$ covers $s=2m-t$ points and lies in exactly $k-s$ of the sets $U$, and $\fl(M;J,A)$ is the same flag whether read in $M$ or in $M|_U$, with the elements of $U$ numbered increasingly. Since $\binom kt\binom{k-t}{m-t}\binom{k-m}{m-t}=\frac k{k-s}\binom{k-1}t\binom{k-1-t}{m-t}\binom{k-1-m}{m-t}$, this gives (b). Part (a) follows in the same way, since a tuple of $T_k$ covers four points and $|T_k|=\frac k{k-4}|T_{k-1}|$. Part (c) is \eqref{eq:c} with $J=[k]\setminus\{a,b\}$, $A=\{a\}$, $B=\{b\}$ and $D=k(k-1)$.
+\end{proof}
+
+Now let $k=9$, and suppose that every block has $2m_b-t_b\le8$ or $(t_b,m_b)=(7,8)$. For an $8$-pattern $N$ let
+\begin{equation}\label{eq:f8}
+f_8(N)=d(N)+\sum_{b:\ 2m_b-t_b\le8}\ \sum_{F,G\in\cF_b}(Q_b)_{FG}\,c(F,G;N),
+\end{equation}
+that is, the value \eqref{eq:val} for $k=8$ of the blocks with $2m_b-t_b\le8$. By Lemma~\ref{lem:averaging}(a) and~(b), and by Lemma~\ref{lem:averaging}(c) for the blocks of the pair $(7,8)$ together with the symmetry of the matrices $Q_b$, every $9$-pattern $M$ satisfies
+\begin{equation}\label{eq:val9}
+\val(M)=\frac19\sum_{|U|=8}f_8(M|_U)+\frac1{36}\sum_{1\le i<j\le9}q(F_{ij},F_{ji}),\qquad F_{ij}=\fl(M;[9]\setminus\{i,j\},\{i\}),
+\end{equation}
+where $q(F,G)$ is the sum of $(Q_b)_{FG}$ over the blocks $b$ of the pair $(7,8)$ that contain both $F$ and $G$. The pattern of the flag $F_{ij}$ is $M|_{[9]\setminus\{j\}}$. Let $Z$ be the set of $8$-patterns $N$ such that $(N,J)\in\cF_b$ for some block $b$ of the pair $(7,8)$ and some $J$. Then $q(F_{ij},F_{ji})=0$ unless $M|_{[9]\setminus\{i\}}$ and $M|_{[9]\setminus\{j\}}$ both lie in $Z$.
+
+\begin{lemma}\label{lem:hier}
+Let $k=9$, let $\cF_b$ and $Q_b$ be as in Theorem~\ref{thm:bound}, with $2m_b-t_b\le8$ or $(t_b,m_b)=(7,8)$ for every block, and let $\lambda$ and $\capv$ be real numbers. Put $\theta=9\lambda-8\capv$ and assume the following.
+\begin{enumerate}[label=\textup{(\arabic*)}]
+\item\label{it:h1} $f_8(N)\le\capv$ for every $N\in\cR_8$.
+\item\label{it:h2} $\val(M)\le\lambda$ for every $M\in\cR_9$ with $f_8(M|_U)>\theta$ for all $8$-element sets $U\subseteq[9]$.
+\item\label{it:h3} $\val(M)\le\lambda$ for every $M\in\cR_9$ with $M|_U\in Z$ for at least two $8$-element sets $U\subseteq[9]$.
+\end{enumerate}
+Then $C\le\lambda$.
+\end{lemma}
+
+\begin{proof}
+Let $M\in\cR_9$ be a pattern to which neither~\ref{it:h2} nor~\ref{it:h3} applies. Then $M|_U\in Z$ for at most one $U$, so every term of the second sum in \eqref{eq:val9} vanishes. The restrictions $M|_U$ are realizable, so $f_8(M|_U)\le\capv$ for all $U$ by~\ref{it:h1}, and $f_8(M|_{U_0})\le\theta$ for some $U_0$ because \ref{it:h2} does not apply. Hence $\val(M)\le(\theta+8\capv)/9=\lambda$. Together with \ref{it:h2} and~\ref{it:h3}, this gives $\val(M)\le\lambda$ for all $M\in\cR_9$, and Theorem~\ref{thm:bound} with $\cP=\cR_9$ gives $C\le\lambda$.
+\end{proof}
+
+\subsection{The exact check}\label{sec:check}
+For the certificate of Theorem~\ref{thm:main}, our checker verifies the following five facts in exact rational arithmetic. It shares with the search programs only the conventions for indexing $T_k$ and the file formats.
+\begin{enumerate}[label=(\roman*)]
+\item\label{st:trees} The trees are extension trees in the sense of Section~\ref{sec:complete}: they are given for all patterns of the previous level, each path decides every tuple of $T_k\setminus T_{k-1}$ exactly once, and every absent branch carries a Gordan certificate for $S_P(s,e)$, which is checked against the rows of $S_P(s,e)$ built from their definitions. The sets $\cP_4,\dots,\cP_7$ are rebuilt from the trees.
+\item\label{st:Q} Each block $Q_b$ is the exact rational matrix formed from its terms $(w_i,v_i)$ with $w_i\ge0$, and every block has $2m_b-t_b\le7$ or $(t_b,m_b)$ equal to $(6,7)$ or $(7,8)$.
+\item\label{st:f8} For each $N\in\cP_7$, the value $f_7(N)$, the sum of $d(N)$ and of the contributions of the blocks with $2m_b-t_b\le7$, is computed from \eqref{eq:c} with $k=7$ by enumerating all triples $(J,A,B)$. The set $\cJ_8$ is formed by the join of Section~\ref{sec:complete}, and for each $M\in\cJ_8$
+\[
+f_8(M)=\frac18\sum_{|U|=7}f_7(M|_U)+\frac1{28}\sum_{1\le i<j\le8}q_7(F_{ij},F_{ji}),\qquad F_{ij}=\fl(M;[8]\setminus\{i,j\},\{i\}),
+\]
+where $q_7(F,G)$ is the sum of $(Q_b)_{FG}$ over the blocks $b$ of the pair $(6,7)$ that contain both $F$ and $G$. This is Lemma~\ref{lem:averaging} with $k=8$, together with the symmetry of the matrices $Q_b$. Every $M\in\cJ_8$ with $f_8(M)>\capv$ has a Gordan certificate for $S(M)$; let $E_8$ be the set of these patterns.
+\item\label{st:join9} The checker determines which patterns of $Z$ lie in $\cJ_8$, and the set $\cS$ of the patterns $M\in\cJ_8\setminus E_8$ with $f_8(M)>\theta$. By joins as in Section~\ref{sec:complete} it forms
+\begin{enumerate}[label=(\alph*)]
+\item\label{st:a} all $9$-patterns $M$ with $M|_U\in\cS$ for every $8$-element set $U\subseteq[9]$, and
+\item\label{st:b} for each $N\in Z\cap\cJ_8$ and each $x\in[9]$, all $9$-patterns $M$ with $M|_{[9]\setminus\{x\}}=N$ and $M|_U\in\cJ_8\setminus E_8$ for every $U$, such that $M|_{[9]\setminus\{y\}}\in Z$ for some $y>x$ and for no $y<x$.
+\end{enumerate}
+For~\ref{st:b}, Lemma~\ref{lem:glue}(a) gives the restriction of $M|_{[9]\setminus\{y\}}$ to the points $[9]\setminus\{x,y\}$ for each $y\ne x$, which restricts the candidates for $M|_{[9]\setminus\{y\}}$ to the patterns of $\cJ_8$ with one given restriction to $7$ points. The values $\val(M)$ of the patterns of~\ref{st:a} and~\ref{st:b} are computed by \eqref{eq:val9}, with $f_8$ from step~\ref{st:f8}.
+\item\label{st:max} Every $M$ of step~\ref{st:join9} with $\val(M)>\lambda$ has a Gordan certificate for $S(M)$, and $\val(M)\le\lambda$ for all other $M$ of step~\ref{st:join9}.
+\end{enumerate}
+
+\begin{proof}[Proof of Theorem~\ref{thm:main}]
+The checker accepts the certificate, which states $\lambda=\BOUNDF$ and $\capv=\CAPF$, so that $\theta=\THRF$. By step~\ref{st:trees} and Proposition~\ref{prop:complete}, $\cR_7\subseteq\cP_7$. By step~\ref{st:f8} and Lemma~\ref{lem:excl}, $\cR_8\subseteq\cP_8=\cJ_8\setminus E_8$ and $f_8\le\capv$ on $\cP_8$, which gives~\ref{it:h1}. By step~\ref{st:Q} the matrices $Q_b$ are positive semidefinite and the blocks are as required in Theorem~\ref{thm:bound} and Lemma~\ref{lem:hier}. Let $M\in\cR_9$. Its restrictions $M|_U$ are realizable and hence lie in $\cP_8$. If $f_8(M|_U)>\theta$ for all $U$, then all $M|_U$ lie in $\cS$, and $M$ is one of the patterns~\ref{st:a} of step~\ref{st:join9} by Lemma~\ref{lem:glue}. If $M|_U\in Z$ for at least two sets $U$, let $x$ be the least $y$ with $M|_{[9]\setminus\{y\}}\in Z$. Then $M$ is one of the patterns~\ref{st:b} for $N=M|_{[9]\setminus\{x\}}$. In both cases $S(M)$ has no Gordan certificate, since $M$ is realizable, so step~\ref{st:max} gives $\val(M)\le\lambda$. This proves~\ref{it:h2} and~\ref{it:h3}, and Lemma~\ref{lem:hier} gives $C\le\BOUNDF$. The lower bound is \eqref{eq:BF}.
+\end{proof}
+
+
+For the certificate with $k=8$, the checker performs steps~\ref{st:trees} to~\ref{st:f8}, where step~\ref{st:Q} allows only blocks with $2m_b-t_b\le7$ or $(t_b,m_b)=(6,7)$ and step~\ref{st:f8} compares $f_8$ with the claimed bound $\BOUNDEIGHTF$ instead of with $\capv$; for this certificate $f_8=\val$. By Lemma~\ref{lem:excl} and Theorem~\ref{thm:bound} with $\cP=\cP_8$, this proves $C\le\BOUNDEIGHTF$. For $k=6$ and $k=7$, a simpler checker performs step~\ref{st:trees} for the levels $4$ to $k$ and the checks of step~\ref{st:Q} with the condition $2m_b-t_b\le k$, and it evaluates $\val(M)$ from the definitions for every $M\in\cP_k$.
+
+The independent second implementation covers all four certificates. For $k=6$ and $k=7$ it gives every pattern the value $\val(M)$ that the checker computes, and for $k=8$ and $k=9$ it reproduces the numbers of patterns, the maximum of $\val$ and the patterns above the bounds, whose Gordan certificates it verifies with rows that it builds itself.
+
+\begin{table}[ht]
+\centering
+\caption{The bounds of Theorem~\ref{thm:main} ($k=9$) and of the certificates for $k=6$, $7$ and $8$. For $k\le8$ the largest value is the maximum of $\val$ over $\cP_k$, where $\cP_8$ is $\cJ_8$ without the two patterns of $E$; for $k=9$ it is the maximum of $\val$ over the patterns of step~(iv) without Gordan certificates, and the largest density is not computed. The excess over the conjectured value $C^*=0.4006953723\ldots$ is rounded.}\label{tab:cert}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{2.75cm}>{\raggedright\arraybackslash}p{2.75cm}>{\raggedright\arraybackslash}p{2.75cm}>{\raggedright\arraybackslash}p{2.75cm}@{}}
+\toprule
+Sample points $k$ & $6$ & $7$ & $8$ & $9$\\
+Bound $\lambda$ & $201273/500000$ & $10019/25000$ & $\BOUNDEIGHTF$ & $\BOUNDF$\\
+Largest value & $0.4025451283\ldots$ & $0.4007589336\ldots$ & $\EXMAXEIGHT$ & $\EXMAX$\\
+$|T_k|$ & $60$ & $140$ & $280$ & $504$\\
+Largest density & $7/15$ & $16/35$ & $25/56$ & --\\
+Excess of $\lambda$ over $C^*$ & $1.85\cdot10^{-3}$ & $6.5\cdot10^{-5}$ & $2.9\cdot10^{-6}$ & $9.7\cdot10^{-7}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+\section{Formal verification}\label{sec:lean}
+
+The upper bounds of Table~\ref{tab:cert}, and so the upper bound of Theorem~\ref{thm:main}, also have proofs in the Lean~4 proof assistant \cite{Lean4} with the Mathlib library \cite{Mathlib}. The formal statements concern probability measures $\mu$ on $\R$ with $\mu((-\infty,0))=0$. They define $P(\mu)$ as the measure of the set $\{x\in\R^4:\ x_1+x_2+x_3<2x_4\}$ under the product of four copies of $\mu$, and $C$ as the supremum of $P(\mu)$ over these measures. For each certificate they state that $P(\mu)\le\lambda$ for every such $\mu$, the same bound for independent, identically distributed random variables that are nonnegative almost surely, and $C\le\lambda$; a further theorem computes $P(\mu)=1/4$ for $\mu=(\delta_0+\delta_1)/2$, so the definitions are not degenerate. The formal proofs follow Sections~\ref{sec:patterns} to~\ref{sec:cert}. For each certificate, a checking program written in Lean performs checks corresponding to those of Section~\ref{sec:check}, and a Lean proof shows that whenever the program accepts its input, there are positive semidefinite blocks with $\val(M)\le\lambda$ for every realizable $k$-pattern $M$, as Theorem~\ref{thm:bound} requires. Scripts convert the certificate files into Lean source files; they need not be trusted, since the correctness proofs hold for every input that the programs accept. The lower bound in \eqref{eq:BF} is not formalized.
+
+In one proof for each certificate, the checks are evaluated by \texttt{native\_decide}, that is, by code that Lean's compiler produces from the programs. Its trusted base includes the Lean compiler and runtime and, for $k=7$, $8$ and $9$, a C compiler, and each of these theorems depends, besides the three standard axioms of Lean, on one auxiliary axiom that asserts that the check of its certificate returns true. For $k=6$, $7$ and $9$ there are also proofs in which Lean's kernel evaluates the checks itself; the resulting theorems depend only on the three standard axioms. For $k=9$ this gives a proof of the upper bound of Theorem~\ref{thm:main} that does not depend on Lean's compiler or on the code it generates: its trusted base is Lean's kernel, including the kernel's built-in arithmetic on natural numbers. The bound for $k=8$ has only the proof with compiled checks.
+
+\section{Concluding remarks}\label{sec:dual}
+
+\subsection*{The dual solution}
+The dual of the semidefinite program of Section~\ref{sec:cert} asks for a probability vector $y$ on $\cP$ that maximizes $\sum_My(M)\,d(M)$ subject to $\sum_My(M)\,c_b(M)\succeq0$ for each $b$, where $c_b(M)=(c(F,G;M))_{F,G\in\cF_b}$. By Lemmas~\ref{lem:average} and~\ref{lem:pos}, the vector $p_\mu$ is feasible for every measure $\mu$ without atoms that satisfies $\mu((0,\infty))=1$, with objective value $P(\mu)$. So the dual is a relaxation of the problem of maximizing $P(\mu)$. Numerically, the dual solution of the last program for $k=7$, on $4{,}146$ patterns and with the trace bound ignored (its multiplier is $5\cdot10^{-11}$), gives weight above $10^{-6}$ to $\NDUAL$ patterns. More than $\DUALMASS$ of its mass lies on the $\NEXT$ patterns observed in $300{,}000$ samples of $7$ points from the construction of Bellec and Fritz \cite[Propositions~3.3 and~4.1]{BF26}. In this construction we take $p=0.474346$ and $N=50$ in \cite[(4.4)]{BF26}, truncate it after nine scales, put a uniform variable at the finest scale, and choose the ratio between consecutive scales small enough not to affect the patterns. Conversely, more than $92\%$ of the samples fall on the $\NDUAL$ patterns with weight above $10^{-6}$. The relaxation and the lower bound construction thus favor the same patterns, which is consistent with Conjecture~5.1 of \cite{BF26}.
+
+
+\subsection*{An open question}\label{sec:open}
+From $k=6$ to $k=9$ the excess of the bound over $C^*$ falls by factors of about $29$, $22$ and $3$ (Table~\ref{tab:cert}). We do not know whether a certificate of this kind with some finite $k$ reaches $C^*$. The construction of Bellec and Fritz suggests why this may be hard. In it, each sample point $X_i$ is a series $\sum_{j\ge1}\eta^{j-1}\xi^{(i)}_j$ with a small ratio $\eta\in(0,1)$ and independent digits $\xi^{(i)}_j$ with a common law. When the first digits satisfy $\xi^{(1)}_1+\xi^{(2)}_1+\xi^{(3)}_1=2\xi^{(4)}_1$, the event $X_1+X_2+X_3<2X_4$ is decided by the numbers $\sum_{j\ge2}\eta^{j-2}\xi^{(i)}_j$ formed by the remaining digits, which are independent of the first digits and have the same law as the points themselves \cite[proof of Proposition~3.3]{BF26}. The problem thus reappears at every scale, while a certificate for $k$ points constrains only the patterns of $k$ points.
+
+\begin{remark}\label{rem:exact}
+The conjectured value $C^*$ is the algebraic number $\beta(p^*)$, where $\beta(p)=p(2-p)/(1+p+p^2+p^3)$. The numerator of $\beta'$ is $p^4-4p^3-3p^2-2p+2$, which is irreducible over $\mathbb{Q}$, and $16z^4+8z^3+99z^2-32z-4$ is $16$ times the characteristic polynomial of multiplication by $\beta(p)$ on $\mathbb{Q}[p]/(p^4-4p^3-3p^2-2p+2)$. This polynomial is irreducible over $\mathbb{Q}$, so up to the factor $16$ it is the minimal polynomial of $C^*$, and $C^*$ is its only positive root.
+\end{remark}
+
+
+
+\section*{Data availability}
+The certificates, the checkers, the second implementation, the search programs and the Lean proofs of Section~\ref{sec:lean} are archived at \href{https://doi.org/\ZENODODOI}{doi:\ZENODODOI}. The programs, the certificates for $k=6$ and $k=7$ and the Lean sources, except for some large data files, are also available at \url{\REPOURL}. The Lean proofs build with Lean~4 version~\LEANVER{} and Mathlib at the tag \texttt{\MATHLIBTAG} (commit \texttt{\MATHLIBCOMMIT}).
+
+\section*{Use of AI tools}
+Generative AI tools were used to find and prove the results, to write the programs and the Lean formalization, and to draft the text. The author reviewed the arguments, the programs and the formal proofs, and takes responsibility for the content.
+
+\begin{thebibliography}{99}
+\bibitem{BHLPUV15} J.~Balogh, P.~Hu, B.~Lidick\'y, O.~Pikhurko, B.~Udvari and J.~Volec, \emph{Minimum number of monotone subsequences of length 4 in permutations}, Combin. Probab. Comput. \textbf{24} (2015), 658--679.
+\bibitem{BF26} P.~C.~Bellec and T.~Fritz, \emph{On maximizing the probability of a linear inequality between iid random variables}, Amer. Math. Monthly (2026), doi:10.1080/00029890.2026.2702871; arXiv:2412.15179v5 (listed on arXiv as \emph{Optimizing over iid distributions and the Beat the Average game}), whose numbering we cite.
+\bibitem{Bor99} B.~Borchers, \emph{CSDP, a C library for semidefinite programming}, Optim. Methods Softw. \textbf{11} (1999), 613--623.
+\bibitem{Fri24} T.~Fritz, \emph{How large can $\mathbf{P}[X_1+X_2+X_3<2X_4]$ get?}, MathOverflow question 474916, 2024, \url{https://mathoverflow.net/q/474916}.
+\bibitem{GGTW25} B.~Georgiev, J.~G\'omez-Serrano, T.~Tao and A.~Z.~Wagner, \emph{Mathematical exploration and discovery at scale}, arXiv:2511.02864, 2025.
+\bibitem{Gor73} P.~Gordan, \emph{Ueber die Aufl\"osung linearer Gleichungen mit reellen Coefficienten}, Math. Ann. \textbf{6} (1873), 23--28.
+\bibitem{HiGHS} Q.~Huangfu and J.~A.~J.~Hall, \emph{Parallelizing the dual revised simplex method}, Math. Program. Comput. \textbf{10} (2018), 119--142.
+\bibitem{Mathlib} The mathlib Community, \emph{The Lean mathematical library}, in: Proc. 9th ACM SIGPLAN Int. Conf. Certified Programs and Proofs (CPP 2020), 2020, 367--381.
+\bibitem{Lean4} L.~de~Moura and S.~Ullrich, \emph{The Lean 4 theorem prover and programming language}, in: Automated Deduction -- CADE 28, Lecture Notes in Comput. Sci. \textbf{12699}, Springer, 2021, 625--635.
+\bibitem{AE25} A.~Novikov et al., \emph{AlphaEvolve: A coding agent for scientific and algorithmic discovery}, arXiv:2506.13131, 2025.
+\bibitem{Raz07} A.~A.~Razborov, \emph{Flag algebras}, J. Symbolic Logic \textbf{72} (2007), 1239--1282.
+\bibitem{SS18} J.~Slia\v{c}an and W.~Stromquist, \emph{Improving bounds on packing densities of 4-point permutations}, Discrete Math. Theor. Comput. Sci. \textbf{19} (2018), no.~2, paper~3.
+\bibitem{Yu24} V.~Yu, answer to \cite{Fri24}, MathOverflow, 2024, \url{https://mathoverflow.net/a/484853}.
+\end{thebibliography}
+
+\end{document}

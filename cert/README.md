@@ -29,7 +29,7 @@ The commands are in `../README.md`:
 
 The certificates of `C <= 20034817/50000000` on 9 sample points and of `C <= 4006983/10000000` on 8 sample points
 are too large for this repository. They are on the Zenodo supplement record
-([doi:10.5281/zenodo.23570173](https://doi.org/10.5281/zenodo.23570173)) as `cert_k9_040069634.json.xz` (41,183,432 bytes,
+([doi:10.5281/zenodo.23716000](https://doi.org/10.5281/zenodo.23716000)) as `cert_k9_040069634.json.xz` (41,183,432 bytes,
 SHA-256 `3bf79d2b65f76e8632893e4935c882bf57c72c98d5394b2962424f85234faae3`) and `cert_k8_04006983.json.xz`
 (14,525,276 bytes, SHA-256 `2767ed0a489d927f8990b5d64bb7be62f9caca901bfff683000ade348571b05f`). Put them into this
 directory and decompress the `.xz` files before checking
